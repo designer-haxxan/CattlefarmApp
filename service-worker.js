@@ -1,6 +1,6 @@
 /* Service worker: precaches the app shell and CDN libraries so the POS loads fully offline.
    Bump VERSION whenever any cached file changes so clients pick up the update. */
-const VERSION = 'saleapp-v1.1.1';
+const VERSION = 'saleapp-v1.2.0';
 const SHELL = [
   './', './index.html', './manifest.json', './css/app.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
@@ -9,7 +9,7 @@ const SHELL = [
   './js/db/idb.js', './js/db/schema.js',
   './js/modules/accounts.js', './js/modules/backup.js', './js/modules/dashboard.js', './js/modules/documents.js',
   './js/modules/parties.js', './js/modules/pos.js', './js/modules/products.js', './js/modules/settings.js', './js/modules/stock.js', './js/modules/vouchers.js',
-  './js/printer/escpos.js', './js/printer/printer.js', './js/printer/receipt.js',
+  './js/printer/escpos.js', './js/printer/printer.js', './js/printer/raster.js', './js/printer/receipt.js',
   './js/reports/reports.js', './js/scanner/scanner.js',
   './js/services/auth.js', './js/services/backup.js', './js/services/catalog.js', './js/services/posting.js',
 ];
@@ -44,6 +44,8 @@ self.addEventListener('install', (event) => {
     const cache = await caches.open(VERSION);
     await cache.addAll(SHELL);
     await cacheCdn(cache);
+    // Urdu font (large): cached for offline receipts; install still succeeds if this download fails.
+    try { await cache.add('./fonts/jameel-noori-nastaleeq.woff'); } catch (e) { /* cached at runtime later */ }
     // First install activates immediately; updates wait for the user to confirm.
     if (!self.registration.active) await self.skipWaiting();
   })());

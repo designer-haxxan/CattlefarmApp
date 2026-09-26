@@ -5,6 +5,7 @@ import { AppError } from '../core/utils.js';
 import * as UI from '../core/ui.js';
 import { buildReceipt, toEscPos, toHTML } from './receipt.js';
 import { EscPos } from './escpos.js';
+import { ensureFont, isRTL } from './raster.js';
 
 // Known ESC/POS BLE printer channels: [service, write characteristic]. Every service the app touches must be
 // listed in optionalServices, otherwise the browser throws SecurityError even after connecting.
@@ -188,13 +189,15 @@ export function printHTML(html, { page = 'auto', width = null } = {}) {
   document.head.appendChild(style);
   const cleanup = () => { area.innerHTML = ''; style.remove(); window.removeEventListener('afterprint', cleanup); };
   window.addEventListener('afterprint', cleanup);
-  setTimeout(() => window.print(), 50);
+  // The print area is hidden on screen, so the browser won't fetch the Urdu font by itself: load it first.
+  const fontReady = isRTL(area.textContent) ? ensureFont() : Promise.resolve();
+  Promise.race([fontReady, new Promise((r) => setTimeout(r, 4000))]).then(() => setTimeout(() => window.print(), 50));
 }
 
 async function output(bytesFn, htmlFn, width) {
   const method = getSettings().printer.method;
-  if (method === 'bluetooth') return enqueue(() => writeBytes(bytesFn()));
-  if (method === 'rawbt') return rawbt(bytesFn());
+  if (method === 'bluetooth') return enqueue(async () => writeBytes(await bytesFn()));
+  if (method === 'rawbt') return rawbt(await bytesFn());
   return printHTML(htmlFn(), { width });
 }
 

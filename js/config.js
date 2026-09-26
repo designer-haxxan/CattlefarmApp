@@ -1,7 +1,7 @@
 // Deployment configuration.
 export const CONFIG = {
   APP_NAME: 'SaleAPP POS',
-  APP_VERSION: '1.1.0',
+  APP_VERSION: '1.2.0',
   SCHEMA_VERSION: 1,
   BACKUP_VERSION: 1,
   // Login API: POST {AUTH_API_BASE}/login. The server does not send CORS headers, so the app must be

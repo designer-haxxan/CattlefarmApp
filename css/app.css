@@ -1,4 +1,14 @@
+/* Jameel Noori Nastaleeq for Urdu/Arabic script only (unicode-range): Latin text keeps the system font,
+   and the font file is only downloaded when Urdu text is shown or printed. */
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  src: url('../fonts/jameel-noori-nastaleeq.woff') format('woff');
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
+}
 :root {
+  --bs-font-sans-serif: 'Jameel Noori Nastaleeq', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
+  --bs-body-font-family: var(--bs-font-sans-serif);
   --topbar-h: 52px;
   --bottomnav-h: 62px;
   --sidebar-w: 236px;
@@ -146,13 +156,15 @@ button.list-row { width: 100%; background: none; border-left: 0; border-right: 0
   body { background: #fff !important; }
   #print-area { display: block !important; color: #000; }
 }
-.receipt { font-family: 'Courier New', monospace; color: #000; background: #fff; font-size: 12px; line-height: 1.3; margin: 0 auto; }
+.receipt { font-family: 'Jameel Noori Nastaleeq', 'Courier New', monospace; color: #000; background: #fff; font-size: 12px; line-height: 1.3; margin: 0 auto; }
 .receipt.w58 { width: 48mm; }
 .receipt.w80 { width: 72mm; }
 .receipt .c { text-align: center; }
 .receipt .r { text-align: right; }
 .receipt .b { font-weight: bold; }
 .receipt .big { font-size: 15px; }
+.receipt .ur { font-size: 1.6em; line-height: 1.7; unicode-bidi: plaintext; }
+.receipt .c .ur, .receipt .r .ur { display: inline-block; }
 .receipt hr { border: 0; border-top: 1px dashed #000; margin: 4px 0; opacity: 1; }
 .receipt table { width: 100%; border-collapse: collapse; }
 .receipt td { vertical-align: top; padding: 0; }

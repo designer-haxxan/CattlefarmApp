@@ -2,7 +2,8 @@
 import * as idb from '../db/idb.js';
 import { getSettings } from '../core/settings.js';
 import { fmtNum, fmtQty, fmtDateTime, fmtDate, esc, localDate } from '../core/utils.js';
-import { EscPos } from './escpos.js';
+import { EscPos, isPlain } from './escpos.js';
+import * as Raster from './raster.js';
 
 const TITLES = { sale: 'SALES RECEIPT', purchase: 'PURCHASE', saleReturn: 'SALE RETURN', purchaseReturn: 'PURCHASE RETURN', receipt: 'PAYMENT RECEIPT', payment: 'PAYMENT VOUCHER', transfer: 'TRANSFER' };
 
@@ -47,8 +48,10 @@ export async function buildReceipt(kind, doc) {
   return m;
 }
 
-export function toEscPos(m, width = 58) {
-  const p = new EscPos(width);
+// Async because Urdu/non-Latin lines are rendered with the Jameel Noori Nastaleeq web font.
+export async function toEscPos(m, width = 58) {
+  await Raster.ensureFont();
+  const p = new EscPos(width, Raster);
   const cur = getSettings().currency;
   p.align('center');
   m.header.forEach((h, i) => { if (i === 0) p.bold(true).size(true).wrap(h, Math.floor(p.cols / 2)).size(false).bold(false); else p.wrap(h); });
@@ -74,16 +77,19 @@ export function toEscPos(m, width = 58) {
   return p.bytes();
 }
 
+// Urdu/RTL text is wrapped so it uses Jameel Noori Nastaleeq and right-to-left layout.
+const t = (s) => (isPlain(s) ? esc(s) : `<span class="ur" dir="auto">${esc(s)}</span>`);
+
 export function toHTML(m, width = 58) {
   const cur = esc(getSettings().currency);
   const row = (l, r, cls = '') => `<tr class="${cls}"><td>${l}</td><td class="r">${r}</td></tr>`;
   return `<div class="receipt w${Number(width) === 80 ? 80 : 58}">
-    ${m.header.map((h, i) => `<div class="c ${i === 0 ? 'b big' : ''}">${esc(h)}</div>`).join('')}
+    ${m.header.map((h, i) => `<div class="c ${i === 0 ? 'b big' : ''}">${t(h)}</div>`).join('')}
     <hr><div class="c b">${esc(m.title)}</div>${m.void ? '<div class="c b">*** VOID ***</div>' : ''}
-    <table>${m.info.map(([k, v]) => row(esc(k) + ':', esc(v))).join('')}</table>
-    ${m.items.length ? '<hr><table>' + m.items.map((i) => `<tr><td colspan="2">${esc(i.name)}</td></tr>${row(`&nbsp;&nbsp;${fmtQty(i.qty)} ${esc(i.unit || '')} x ${fmtNum(i.rate)}`, fmtNum(i.amount))}${i.discount ? row('&nbsp;&nbsp;Discount', '-' + fmtNum(i.discount)) : ''}`).join('') + '</table>' : ''}
+    <table>${m.info.map(([k, v]) => row(esc(k) + ':', t(v))).join('')}</table>
+    ${m.items.length ? '<hr><table>' + m.items.map((i) => `<tr><td colspan="2">${t(i.name)}</td></tr>${row(`&nbsp;&nbsp;${fmtQty(i.qty)} ${esc(i.unit || '')} x ${fmtNum(i.rate)}`, fmtNum(i.amount))}${i.discount ? row('&nbsp;&nbsp;Discount', '-' + fmtNum(i.discount)) : ''}`).join('') + '</table>' : ''}
     <hr><table>${m.totals.map(([k, v, strong]) => row(esc(k), `${v < 0 ? '-' : ''}${cur} ${fmtNum(Math.abs(v))}`, strong ? 'b' : '')).join('')}
-    ${m.payment ? row('Payment', esc(m.payment)) : ''}</table>
-    ${m.note ? `<hr><div>Note: ${esc(m.note)}</div>` : ''}
-    <hr>${m.footer ? `<div class="c">${esc(m.footer)}</div>` : ''}</div>`;
+    ${m.payment ? row('Payment', t(m.payment)) : ''}</table>
+    ${m.note ? `<hr><div>Note: ${t(m.note)}</div>` : ''}
+    <hr>${m.footer ? `<div class="c">${t(m.footer)}</div>` : ''}</div>`;
 }
