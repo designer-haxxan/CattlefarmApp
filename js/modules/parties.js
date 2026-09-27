@@ -7,6 +7,7 @@ import * as Catalog from '../services/catalog.js';
 import * as Posting from '../services/posting.js';
 import { printHTML } from '../printer/printer.js';
 import { getSettings } from '../core/settings.js';
+import { storageKey } from '../config.js';
 
 const $ = window.jQuery;
 const LABEL = { customers: ['Customer', 'Customers', 'Receivable'], suppliers: ['Supplier', 'Suppliers', 'Payable'] };
@@ -127,7 +128,8 @@ async function renderDetail(el, kind, id) {
     if (await newVoucher({ type: payType, counterAccountId: acc })) load();
   });
   $el.on('click', '.btn-sell', () => {
-    localStorage.setItem('pos.draft.sale', JSON.stringify({ ...JSON.parse(localStorage.getItem('pos.draft.sale') || '{}'), mode: 'sale', partyId: id, partyName: p.name }));
+    const key = storageKey('draft.sale');
+    localStorage.setItem(key, JSON.stringify({ ...JSON.parse(localStorage.getItem(key) || '{}'), mode: 'sale', partyId: id, partyName: p.name }));
     location.hash = '#/pos';
   });
   $el.on('click', '.btn-print', () => {

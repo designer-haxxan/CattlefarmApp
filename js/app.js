@@ -48,25 +48,26 @@ function fatal(msg) {
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
+  // New versions install and activate on their own (see service-worker.js); check whenever the app is opened.
   navigator.serviceWorker.register('service-worker.js').then((reg) => {
-    const promptUpdate = (w) => {
-      const $t = $(`<div class="toast show text-bg-dark border-0" role="alert"><div class="d-flex align-items-center p-2 gap-2">
-        <div class="toast-body py-1">A new version is available.</div>
-        <button class="btn btn-sm btn-primary ms-auto">Update</button></div></div>`);
-      $t.find('button').on('click', () => w.postMessage({ type: 'SKIP_WAITING' }));
-      $('#toast-container').append($t);
+    const check = () => {
+      if (!navigator.onLine) return;
+      reg.update().catch(() => {});
+      // Other apps on this origin can wipe our offline cache; ask the worker to rebuild it if needed.
+      (reg.active || navigator.serviceWorker.controller)?.postMessage({ type: 'ENSURE_CACHE' });
     };
-    if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) promptUpdate(w); });
-    });
-    setInterval(() => navigator.onLine && reg.update().catch(() => {}), 60 * 60 * 1000);
+    check();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 60 * 60 * 1000);
   }).catch((e) => console.warn('Service worker registration failed:', e));
-  // Reload only when an update replaced an existing worker (not on the very first install).
-  const hadController = !!navigator.serviceWorker.controller;
+  // Reload when an update replaces an existing worker, so the page never mixes files from two versions.
+  // (The very first install only takes control; nothing to reload.)
+  let controlled = !!navigator.serviceWorker.controller;
   let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (controlled && !reloading) { reloading = true; location.reload(); }
+    controlled = true;
+  });
 }
 
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; $('#install-btn').removeClass('d-none'); });

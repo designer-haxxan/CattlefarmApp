@@ -6,6 +6,7 @@ import { getSettings, saveSettings } from '../core/settings.js';
 import * as Auth from '../services/auth.js';
 import * as Posting from '../services/posting.js';
 import * as Printer from '../printer/printer.js';
+import * as Scanner from '../scanner/scanner.js';
 
 const $ = window.jQuery;
 
@@ -61,7 +62,14 @@ export default {
           <div class="form-text">If receipts come out cut off or garbled, choose Safe.</div>
         </div>
         <div class="rawbt-box small text-body-secondary mt-2 ${s.printer.method === 'rawbt' ? '' : 'd-none'}">Install the free <b>RawBT</b> app from Google Play, pair your printer in RawBT, then print from here. Receipts are sent as ESC/POS data.</div>
-        <button class="btn btn-outline-secondary mt-3 btn-test"><i class="bi bi-printer me-1"></i>Test print</button>`)}
+        <div class="img-box mt-3 ${s.printer.method === 'browser' ? 'd-none' : ''}">
+          <label class="form-label">Urdu printing mode</label>
+          <select class="form-select f-imgmode">
+            <option value="gsv0" ${s.printer.imageMode !== 'escstar' ? 'selected' : ''}>Standard (GS v 0) — most printers</option>
+            <option value="escstar" ${s.printer.imageMode === 'escstar' ? 'selected' : ''}>Compatibility (ESC *) — older printers</option></select>
+          <div class="form-text">Urdu is printed as an image. If Test print shows blank space or garbage where Urdu should be, switch to Compatibility.</div>
+        </div>
+        <button class="btn btn-outline-secondary mt-3 btn-test"><i class="bi bi-printer me-1"></i>Test print (incl. Urdu)</button>`)}
       ${section('My account', 'person-circle', `<div class="mb-2"><b>${esc(u.username)}</b><div class="small text-body-secondary">${esc(Auth.ROLES[u.role] || u.role)}</div></div>
         <div class="small">Session valid until <b>${esc(fmtDateTime(new Date(Auth.expiresAt()).toISOString()))}</b>. After that, sign in again while online.</div>
         <div class="small mt-1">Device ID: <code class="user-select-all">${esc(Auth.deviceId())}</code></div>
@@ -71,6 +79,9 @@ export default {
           <button class="btn btn-outline-secondary btn-install d-none"><i class="bi bi-download me-1"></i>Install app</button>
           ${manage ? '<button class="btn btn-outline-secondary btn-integrity"><i class="bi bi-shield-check me-1"></i>Check data integrity</button><button class="btn btn-outline-secondary btn-rebuild"><i class="bi bi-arrow-repeat me-1"></i>Recalculate stock</button>' : ''}
         </div>
+        <div class="d-flex align-items-center gap-2 mt-3"><i class="bi bi-camera"></i><span class="small flex-grow-1">Camera for barcode scanning: <b class="cam-state">checking…</b></span>
+          <button class="btn btn-sm btn-outline-secondary btn-cam-test">Test camera</button></div>
+        <div class="cam-help mt-2"></div>
         <div class="small text-body-secondary mt-2 ios-hint d-none">On iPhone/iPad: tap <i class="bi bi-box-arrow-up"></i> Share → <b>Add to Home Screen</b> to install.</div>`)}
     </div></div>`);
 
@@ -107,10 +118,24 @@ export default {
       saveSettings({ printer: { method: f.method.value, width: Number(f.width.value), autoPrint: f.autoPrint.checked, copies } });
       $el.find('.bt-box').toggleClass('d-none', f.method.value !== 'bluetooth');
       $el.find('.rawbt-box').toggleClass('d-none', f.method.value !== 'rawbt');
+      $el.find('.img-box').toggleClass('d-none', f.method.value === 'browser');
     });
+    $el.on('change', '.f-imgmode', function () { saveSettings({ printer: { imageMode: this.value } }); UI.toast('Urdu printing mode saved'); });
     $el.on('change', '.f-chunk', function () { saveSettings({ printer: { chunkSize: Number(this.value) } }); UI.toast('Printer speed saved'); });
     $el.on('click', '.btn-bt-connect', async () => { try { const n = await Printer.connectBluetooth(); UI.toast(`Connected to ${n || 'printer'}`); } catch (e) { UI.toastError(e); } btStatus(); });
     $el.on('click', '.btn-bt-disconnect', () => { Printer.disconnect(); btStatus(); });
+    const camState = async () => {
+      const st = await Scanner.cameraPermission();
+      $el.find('.cam-state').text({ granted: 'Allowed', denied: 'Blocked', prompt: 'Not asked yet', unknown: 'Unknown' }[st] || st)
+        .attr('class', `cam-state text-${st === 'granted' ? 'success' : st === 'denied' ? 'danger' : 'body'}`);
+      $el.find('.cam-help').html(st === 'denied' ? Scanner.cameraHelpHTML() : '');
+    };
+    camState();
+    $el.on('click', '.btn-cam-test', async () => {
+      const code = await Scanner.scan({ title: 'Test camera' });
+      if (code) UI.toast(`Camera works — read ${code}`);
+      camState();
+    });
     $el.on('click', '.btn-test', async () => { try { await Printer.testPrint(); } catch (e) { UI.toastError(e); } });
     const { canInstall, promptInstall } = await import('../app.js');
     if (canInstall()) $el.find('.btn-install').removeClass('d-none').on('click', promptInstall);

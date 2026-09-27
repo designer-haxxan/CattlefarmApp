@@ -2,10 +2,12 @@
 // One account is bound server-side to one device (deviceId). After a successful online login the
 // session { token, expiresAt, username } is kept in LocalStorage and the POS works offline until
 // expiresAt. Passwords are never stored.
-import { CONFIG } from '../config.js';
+import { CONFIG, storageKey } from '../config.js';
 import { AppError } from '../core/utils.js';
 
-const SESSION_KEY = 'minipos.session';
+const SESSION_KEY = storageKey('session');
+// Device id identifies the PHONE (the server binds the account to it), so it is intentionally shared by all
+// apps on this origin; changing it would make the server reply device_mismatch.
 const DEVICE_KEY = 'minipos.deviceId';
 
 // Exact error codes returned by the API → user-facing messages.

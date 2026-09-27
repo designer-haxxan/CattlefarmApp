@@ -7,6 +7,7 @@ import { pref } from '../core/settings.js';
 import * as Auth from '../services/auth.js';
 import * as Catalog from '../services/catalog.js';
 import * as Posting from '../services/posting.js';
+import * as Backup from '../services/backup.js';
 
 const $ = window.jQuery;
 
@@ -51,6 +52,7 @@ export default {
     $el.html(`
       <div class="d-flex justify-content-between align-items-end mb-3"><div><div class="text-body-secondary small">${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</div><h1 class="h5 mb-0">Hello, ${esc(u.name.split(' ')[0])}</h1></div></div>
       ${!navigator.onLine ? '<div class="alert alert-secondary py-2 small"><i class="bi bi-wifi-off me-1"></i>You are offline. Everything you do is saved on this device.</div>' : ''}
+      <div class="legacy-hint"></div>
       ${Auth.can('backup.export') && (backupDays === null || backupDays >= 7) ? `<div class="alert alert-warning py-2 small d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle"></i><div class="flex-grow-1">${backupDays === null ? 'No backup has been made on this device yet.' : `Last backup was ${backupDays} days ago.`} Your data only lives on this device.</div><a class="btn btn-sm btn-warning" href="#/backup">Back up</a></div>` : ''}
       <div class="row g-2 mb-3">
         ${qa('#/pos', 'cart-plus', 'New sale', 'sale.create')}${qa('#/purchase/new', 'bag-plus', 'Purchase', 'purchase.manage')}
@@ -77,6 +79,9 @@ export default {
         <div class="col-md-6"><h2 class="h6 text-body-secondary">Recent sales</h2><div class="list-card">${f.recent.map((s) => `<a class="list-row" href="#/sales/${encodeURIComponent(s.id)}"><div class="main"><div class="title">${esc(s.number)}</div><div class="sub">${esc(s.customerName)} · ${fmtTime(s.createdAt)}</div></div><div class="end fw-semibold money">${fmtNum(s.total)}</div></a>`).join('') || UI.emptyState('No sales yet today', 'receipt')}</div></div>
         <div class="col-md-6"><h2 class="h6 text-body-secondary">Low stock</h2><div class="list-card">${low.slice(0, 6).map((p) => `<a class="list-row" href="#/stock/${encodeURIComponent(p.id)}"><div class="main"><div class="title">${esc(p.name)}</div><div class="sub">Min ${fmtQty(p.minStock || 0)}</div></div><div class="end"><span class="badge ${p.stock <= 0 ? 'text-bg-danger' : 'text-bg-warning'}">${fmtQty(p.stock)} ${esc(p.unit)}</span></div></a>`).join('') || UI.emptyState('All stock levels are fine', 'check-circle')}</div></div>
       </div>`);
+    if (Auth.can('backup.restore') && pref.get('legacyHandled') !== true) {
+      Backup.legacyDataExists().then((yes) => yes && $el.find('.legacy-hint').html('<div class="alert alert-info py-2 small d-flex align-items-center gap-2"><i class="bi bi-database"></i><div class="flex-grow-1">Data from an older version was found on this device.</div><a class="btn btn-sm btn-info" href="#/backup">Review</a></div>'));
+    }
     const refresh = () => { if (location.hash === '' || location.hash.startsWith('#/dashboard')) this.render(el); };
     this._h = refresh;
     document.addEventListener('data:changed', refresh);

@@ -8,8 +8,10 @@ export const asciiSafe = (s) => stripAccents(s).replace(/[^\x20-\x7e\n]/g, '?');
 export const isPlain = (s) => /^[\x20-\x7e\n]*$/.test(stripAccents(s));
 
 export class EscPos {
-  constructor(width = 58, raster = null) {
+  // imageMode: 'gsv0' (GS v 0 raster, most printers) or 'escstar' (ESC * 24-dot bit image, older printers)
+  constructor(width = 58, raster = null, { imageMode = 'gsv0' } = {}) {
     this.cols = Number(width) === 80 ? 48 : 32;
+    this.imageMode = imageMode;
     this.dots = this.cols * 12; // font A is 12 dots wide
     this.raster = raster;
     this.state = { align: 'left', bold: false, double: false };
@@ -22,12 +24,36 @@ export class EscPos {
   bold(on) { this.state.bold = !!on; return this.raw(ESC, 0x45, on ? 1 : 0); }
   size(double) { this.state.double = !!double; return this.raw(GS, 0x21, double ? 0x11 : 0x00); }
 
-  // GS v 0: print a 1-bit raster image (full printer width, so alignment is baked into the bitmap).
-  image({ widthBytes, height, data }) {
-    if (!height) return this;
-    this.raw(ESC, 0x61, 0, GS, 0x76, 0x30, 0, widthBytes & 0xff, widthBytes >> 8, height & 0xff, height >> 8);
-    for (let i = 0; i < data.length; i++) this.buf.push(data[i]);
+  // Print a 1-bit image (full printer width, so alignment is baked into the bitmap).
+  image(img) {
+    if (!img.height) return this;
+    this.raw(ESC, 0x61, 0);
+    if (this.imageMode === 'escstar') this.escStar(img);
+    else {
+      const { widthBytes, height, data } = img;
+      this.raw(GS, 0x76, 0x30, 0, widthBytes & 0xff, widthBytes >> 8, height & 0xff, height >> 8);
+      for (let i = 0; i < data.length; i++) this.buf.push(data[i]);
+    }
     return this.raw(ESC, 0x61, { left: 0, center: 1, right: 2 }[this.state.align] ?? 0);
+  }
+
+  // ESC * 33: 24-dot double-density bit image, sent in 24-row bands (column-major, 3 bytes per column).
+  escStar({ widthBytes, height, data }) {
+    const w = widthBytes * 8;
+    const px = (x, y) => (y < height ? (data[y * widthBytes + (x >> 3)] >> (7 - (x & 7))) & 1 : 0);
+    this.raw(ESC, 0x33, 24); // line spacing = 24 dots so bands join without gaps
+    for (let y = 0; y < height; y += 24) {
+      this.raw(ESC, 0x2a, 33, w & 0xff, w >> 8);
+      for (let x = 0; x < w; x++) {
+        for (let k = 0; k < 3; k++) {
+          let b = 0;
+          for (let bit = 0; bit < 8; bit++) b |= px(x, y + k * 8 + bit) << (7 - bit);
+          this.buf.push(b);
+        }
+      }
+      this.raw(0x0a);
+    }
+    return this.raw(ESC, 0x32); // default line spacing
   }
   rasterize(specs) { return this.image(this.raster.render(this.dots, specs, this.state)); }
 

@@ -1,6 +1,9 @@
 /* Service worker: precaches the app shell and CDN libraries so the POS loads fully offline.
-   Bump VERSION whenever any cached file changes so clients pick up the update. */
-const VERSION = 'saleapp-v1.2.0';
+   Bump VERSION whenever any cached file changes; clients update automatically. */
+// Cache names are namespaced: other apps on designer-haxxan.github.io share Cache Storage with this one.
+const APP_ID = 'disterp';
+const VERSION = `${APP_ID}-v1.2.3`;
+const isOwnCache = (key) => key.startsWith(`${APP_ID}-`) || /^saleapp-v/.test(key); // saleapp-v* = this app's older builds
 const SHELL = [
   './', './index.html', './manifest.json', './css/app.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
@@ -24,7 +27,7 @@ const CDN = [
 async function cacheCdn(cache) {
   for (const url of CDN) {
     try {
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'reload' });
       if (!res.ok) continue;
       await cache.put(url, res.clone());
       // Also cache fonts referenced by stylesheets (Bootstrap Icons).
@@ -39,27 +42,37 @@ async function cacheCdn(cache) {
   }
 }
 
+async function precache() {
+  const cache = await caches.open(VERSION);
+  // cache: 'reload' bypasses the browser HTTP cache, so a new version never stores stale files
+  // (GitHub Pages lets browsers cache files for 10 minutes).
+  await cache.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })));
+  await cacheCdn(cache);
+  // Urdu font (large): cached for offline receipts; install still succeeds if this download fails.
+  try { await cache.add(new Request('./fonts/jameel-noori-nastaleeq.woff', { cache: 'reload' })); } catch (e) { /* cached at runtime later */ }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    const cache = await caches.open(VERSION);
-    await cache.addAll(SHELL);
-    await cacheCdn(cache);
-    // Urdu font (large): cached for offline receipts; install still succeeds if this download fails.
-    try { await cache.add('./fonts/jameel-noori-nastaleeq.woff'); } catch (e) { /* cached at runtime later */ }
-    // First install activates immediately; updates wait for the user to confirm.
-    if (!self.registration.active) await self.skipWaiting();
+    await precache();
+    // Activate new versions immediately; open pages reload on controllerchange (POS carts are kept as drafts).
+    await self.skipWaiting();
   })());
+});
+
+// Another app on this origin may have deleted our cache; the page asks us to rebuild it when online.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'ENSURE_CACHE') {
+    event.waitUntil((async () => { if (!(await caches.has(VERSION)) || !(await (await caches.open(VERSION)).match('./index.html'))) await precache(); })());
+  }
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    for (const key of await caches.keys()) if (key !== VERSION) await caches.delete(key);
+    // Only delete this app's own old caches — never other apps' caches on the shared origin.
+    for (const key of await caches.keys()) if (key !== VERSION && isOwnCache(key)) await caches.delete(key);
     await self.clients.claim();
   })());
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {

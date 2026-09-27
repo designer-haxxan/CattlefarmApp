@@ -3,6 +3,7 @@ import * as idb from '../db/idb.js';
 import * as UI from '../core/ui.js';
 import { esc, fmtNum, fmtQty, uuid, round2, round3, num, debounce, today, AppError } from '../core/utils.js';
 import { getSettings, pref } from '../core/settings.js';
+import { storageKey } from '../config.js';
 import * as Auth from '../services/auth.js';
 import * as Catalog from '../services/catalog.js';
 import * as Posting from '../services/posting.js';
@@ -14,7 +15,7 @@ const $ = window.jQuery;
 let st; let $root; let detachWedge = null; let payAccounts = [];
 
 const isSale = () => st.mode === 'sale';
-const draftKey = () => 'pos.draft.' + st.mode;
+const draftKey = () => storageKey('draft.' + st.mode);
 const cur = () => getSettings().currency;
 
 function fresh(mode) {
@@ -395,7 +396,7 @@ export default {
       setTitle(`Edit ${doc.number}`);
     } else {
       st = fresh(mode);
-      try { const d = JSON.parse(localStorage.getItem('pos.draft.' + mode) || 'null'); if (d && d.mode === mode && !d.editId) st = { ...st, ...d }; } catch { /* ignore */ }
+      try { const d = JSON.parse(localStorage.getItem(storageKey('draft.' + mode)) || 'null'); if (d && d.mode === mode && !d.editId) st = { ...st, ...d }; } catch { /* ignore */ }
       if (st.date !== today()) st.date = today();
     }
     $root = $(el);

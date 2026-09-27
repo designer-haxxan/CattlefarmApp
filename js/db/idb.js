@@ -14,7 +14,12 @@ export function openDB() {
       db.onversionchange = () => { db.close(); dbPromise = null; location.reload(); };
       resolve(db);
     };
-    req.onerror = () => { dbPromise = null; reject(req.error); };
+    req.onerror = () => {
+      dbPromise = null;
+      reject(req.error?.name === 'VersionError'
+        ? new Error(`The local database "${DB_NAME}" was created by a newer version of this app. Update the app (reload while online).`)
+        : req.error);
+    };
     req.onblocked = () => reject(new Error('Database upgrade blocked. Close other tabs of this app and reload.'));
   });
   return dbPromise;

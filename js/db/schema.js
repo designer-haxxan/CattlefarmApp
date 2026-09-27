@@ -1,5 +1,9 @@
 // IndexedDB schema definition and migrations.
-export const DB_NAME = 'saleapp_pos';
+import { CONFIG } from '../config.js';
+
+export const DB_NAME = `${CONFIG.APP_ID}_pos`;
+// Database name used by older builds (shared with other apps on the same origin). Never modified; only read on import.
+export const LEGACY_DB_NAME = 'saleapp_pos';
 export const DB_VERSION = 1;
 
 // Stores that make up the business data (included in backups).

@@ -1,10 +1,11 @@
 // Printing: Web Bluetooth (BLE ESC/POS printers), RawBT (Android app bridge for Classic-Bluetooth printers)
 // and the browser print dialog as a universal fallback.
 import { getSettings, saveSettings } from '../core/settings.js';
-import { AppError } from '../core/utils.js';
+import { AppError, esc } from '../core/utils.js';
 import * as UI from '../core/ui.js';
 import { buildReceipt, toEscPos, toHTML } from './receipt.js';
 import { EscPos } from './escpos.js';
+import * as Raster from './raster.js';
 import { ensureFont, isRTL } from './raster.js';
 
 // Known ESC/POS BLE printer channels: [service, write characteristic]. Every service the app touches must be
@@ -217,13 +218,23 @@ export async function printDocument(kind, doc, { silentFail = false } = {}) {
   return true;
 }
 
+const URDU_SAMPLE = 'اردو ٹیسٹ — خریداری کا شکریہ';
+
+// Test print includes Urdu lines, so image printing (used for Urdu) can be checked too.
 export async function testPrint() {
   const s = getSettings();
-  const p = new EscPos(s.printer.width);
-  p.align('center').bold(true).size(true).line('TEST PRINT').size(false).bold(false)
-    .line(s.business.name).hr().align('left').lr('Paper width', s.printer.width + 'mm').lr('Columns', String(p.cols))
-    .lr('Method', s.printer.method).line('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ').hr().align('center').line('Printer OK').feed(3).cut();
-  const html = `<div class="receipt w${s.printer.width}"><div class="c b big">TEST PRINT</div><div class="c">${s.business.name}</div><hr><div>Paper width: ${s.printer.width}mm</div><div>Method: ${s.printer.method}</div><hr><div class="c">Printer OK</div></div>`;
-  await output(() => p.bytes(), () => html, s.printer.width);
+  const bytes = async () => {
+    const fontOk = await ensureFont();
+    const p = new EscPos(s.printer.width, Raster, { imageMode: s.printer.imageMode });
+    p.align('center').bold(true).size(true).line('TEST PRINT').size(false).bold(false)
+      .line(s.business.name).hr().align('left').lr('Paper width', s.printer.width + 'mm').lr('Columns', String(p.cols))
+      .lr('Method', s.printer.method).lr('Urdu images', s.printer.imageMode === 'escstar' ? 'ESC *' : 'GS v 0')
+      .lr('Urdu font', fontOk ? 'Jameel Noori' : 'fallback').line('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ').hr()
+      .align('center').line(URDU_SAMPLE).align('left').lr('Customer:', 'محمد علی').hr()
+      .align('center').line('Printer OK').feed(3).cut();
+    return p.bytes();
+  };
+  const html = `<div class="receipt w${s.printer.width}"><div class="c b big">TEST PRINT</div><div class="c">${esc(s.business.name)}</div><hr><div>Paper width: ${s.printer.width}mm</div><div>Method: ${s.printer.method}</div><hr><div class="c"><span class="ur" dir="auto">${URDU_SAMPLE}</span></div><hr><div class="c">Printer OK</div></div>`;
+  await output(bytes, () => html, s.printer.width);
 }
 

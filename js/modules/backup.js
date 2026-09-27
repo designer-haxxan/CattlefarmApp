@@ -21,6 +21,36 @@ const LABELS = {
   entries: 'Ledger entries', stockMoves: 'Stock movements', adjustments: 'Stock adjustments', holds: 'Held sales', auditLog: 'Activity log', meta: 'Counters / metadata',
 };
 
+// Offer to import data from the old shared database (see services/backup.js).
+async function showLegacy($box) {
+  const old = await Backup.readLegacyData();
+  if (!old) return;
+  const c = old.counts;
+  const rows = ['products', 'customers', 'suppliers', 'sales', 'purchases', 'saleReturns', 'vouchers', 'adjustments']
+    .filter((k) => c[k]).map((k) => `<div class="list-row py-1"><div class="main">${esc(LABELS[k] || k)}</div><div class="end">${c[k]}</div></div>`).join('');
+  $box.html(`<div class="card border-warning"><div class="card-body">
+    <h2 class="h6"><i class="bi bi-database-exclamation me-2"></i>Data from an older version found</h2>
+    <p class="small mb-2">Older versions stored data in a database shared by all apps on <b>${esc(location.host)}</b>
+      (for example AgriSale or pharmaSaleApp). This app now keeps its own separate database. The data below may belong to
+      this app or to one of the others — import it only if it is yours. The old database is not changed.</p>
+    <div class="list-card mb-3 small">${rows}</div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-warning btn-legacy-import"><i class="bi bi-box-arrow-in-down me-1"></i>Import into this app</button>
+      <button class="btn btn-outline-secondary btn-legacy-hide">Don't show again</button>
+    </div></div></div>`);
+  $box.on('click', '.btn-legacy-hide', () => { pref.set('legacyHandled', true); $box.empty(); });
+  $box.on('click', '.btn-legacy-import', async () => {
+    if (!await UI.confirmDialog('Merge the old data into this app? Records that already exist here are kept; missing ones are added.', { okLabel: 'Import' })) return;
+    try {
+      const r = await UI.withLoading(() => Backup.restore(old, 'merge'), 'Importing…');
+      pref.set('legacyHandled', true);
+      UI.toast(`Imported: ${r.added} added, ${r.updated} updated`);
+      if (r.conflicts.length) await UI.confirmDialog(`<p>${r.conflicts.length} record(s) were skipped because of number conflicts:</p><div class="small">${r.conflicts.slice(0, 30).map(esc).join('<br>')}</div>`, { html: true, title: 'Import conflicts', okLabel: 'OK' });
+      location.hash = '#/dashboard';
+    } catch (e) { UI.toastError(e); }
+  });
+}
+
 export default {
   async render(el) {
     const $el = $(el);
@@ -40,7 +70,9 @@ export default {
             <input type="file" accept="application/json,.json" class="form-control file">
             <div class="preview mt-3"></div>` : '<div class="alert alert-secondary small mb-0">Only administrators can restore backups.</div>'}
         </div></div></div>
-      </div>`);
+      </div>
+      <div class="legacy mt-3"></div>`);
+    if (canRestore && pref.get('legacyHandled') !== true) showLegacy($el.find('.legacy'));
     $el.on('click', '.btn-export', async () => {
       try { const b = await downloadBackup(); UI.toast('Backup downloaded'); $el.find('.card-body b').first().text(fmtDateTime(b.createdAt)); } catch (e) { UI.toastError(e); }
     });

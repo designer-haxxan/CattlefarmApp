@@ -1,6 +1,8 @@
 // Lightweight settings/preferences stored in LocalStorage (never operational data or secrets).
+import { storageKey } from '../config.js';
 
-const KEY = 'pos.settings';
+const KEY = storageKey('settings');
+const LEGACY_KEY = 'pos.settings'; // shared by older builds on the same origin; copied once as a starting point
 
 export const DEFAULT_SETTINGS = {
   business: { name: 'My Store', address: '', phone: '', taxNo: '', footer: 'Thank you for your purchase!' },
@@ -10,7 +12,7 @@ export const DEFAULT_SETTINGS = {
   allowNegativeStock: false,
   updatePurchasePrice: true,
   prefixes: { sale: 'SALE', purchase: 'PUR', saleReturn: 'SRN', purchaseReturn: 'PRN', receipt: 'RCV', payment: 'PAY', transfer: 'TRF', adjustment: 'ADJ' },
-  printer: { method: 'browser', width: 58, autoPrint: false, copies: 1, chunkSize: 20, deviceName: '', deviceId: '' },
+  printer: { method: 'browser', width: 58, autoPrint: false, copies: 1, chunkSize: 20, imageMode: 'gsv0', deviceName: '', deviceId: '' },
   theme: 'auto',
   register: 'Main',
 };
@@ -28,7 +30,7 @@ let cache = null;
 export function getSettings() {
   if (!cache) {
     let stored = {};
-    try { stored = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { stored = {}; }
+    try { stored = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || '{}'); } catch { stored = {}; }
     cache = merge(DEFAULT_SETTINGS, stored);
   }
   return cache;
@@ -49,8 +51,8 @@ export function replaceSettings(all) {
 
 // Small per-device preference helpers
 export const pref = {
-  get(k, d = null) { try { const v = localStorage.getItem('pos.pref.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { localStorage.setItem('pos.pref.' + k, JSON.stringify(v)); },
+  get(k, d = null) { try { const v = localStorage.getItem(storageKey('pref.' + k)); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { localStorage.setItem(storageKey('pref.' + k), JSON.stringify(v)); },
 };
 
 export function applyTheme() {
