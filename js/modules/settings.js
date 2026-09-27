@@ -128,7 +128,7 @@ export default {
       const st = await Scanner.cameraPermission();
       $el.find('.cam-state').text({ granted: 'Allowed', denied: 'Blocked', prompt: 'Not asked yet', unknown: 'Unknown' }[st] || st)
         .attr('class', `cam-state text-${st === 'granted' ? 'success' : st === 'denied' ? 'danger' : 'body'}`);
-      $el.find('.cam-help').html(st === 'denied' ? Scanner.cameraHelpHTML() : '');
+      $el.find('.cam-help').html(Scanner.inAppBrowser() ? Scanner.cameraHelpHTML('inapp') : st === 'denied' ? Scanner.cameraHelpHTML('site') : '');
     };
     camState();
     $el.on('click', '.btn-cam-test', async () => {

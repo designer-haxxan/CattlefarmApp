@@ -28,34 +28,67 @@ export async function cameraPermission() {
   try { return (await navigator.permissions.query({ name: 'camera' })).state; } catch { return 'unknown'; }
 }
 
-// Step-by-step help to re-enable a blocked camera, for the platform the app is running on.
-export function cameraHelpHTML() {
-  const ua = navigator.userAgent;
+// ---------- Why the camera is unavailable, and how to fix it ----------
+// Chrome only lists a site under Site settings → Camera AFTER the site has asked once, so an empty list is normal.
+// Causes: 'inapp' (WhatsApp/Facebook/Instagram built-in browser), 'system' (Android does not let the BROWSER use
+// the camera, or the quick-settings "Camera access" switch is off), 'site' (camera blocked for this site / Chrome's
+// global Camera switch off), 'dismissed' (prompt closed; Chrome pauses it after repeated dismissals).
+const UA = () => navigator.userAgent;
+export const inAppBrowser = () => /FBAN|FBAV|FB_IAB|Instagram|Line\/|; wv\)/i.test(UA());
+
+export async function diagnoseCameraError(e) {
+  if (inAppBrowser()) return 'inapp';
+  if (/system/i.test(String(e?.message || e))) return 'system'; // Chrome: "Permission denied by system"
+  return (await cameraPermission()) === 'denied' ? 'site' : 'dismissed';
+}
+
+export function cameraHelpHTML(reason = 'site') {
+  const ua = UA();
   const android = /Android/i.test(ua);
   const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const samsung = /SamsungBrowser/i.test(ua);
+  const browser = samsung ? 'Samsung Internet' : 'Chrome';
   const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const site = esc(location.host);
-  let steps;
-  if (android && installed) {
-    steps = `<li>Long-press the <b>SaleAPP</b> icon on your home screen → tap <b>App info</b> (ⓘ).</li>
-      <li>Open <b>Permissions</b> → <b>Camera</b> → choose <b>Allow only while using the app</b>.</li>
-      <li>If Camera is not listed there: open <b>Chrome</b> → ⋮ → <b>Settings</b> → <b>Site settings</b> → <b>Camera</b> → <b>${site}</b> → <b>Allow</b>.</li>`;
-  } else if (android) {
-    steps = `<li>Tap the <b>ⓘ / lock icon</b> left of the address bar.</li>
-      <li>Tap <b>Permissions</b> (or <b>Site settings</b>) → <b>Camera</b> → <b>Allow</b>.</li>
-      <li>Or: Chrome ⋮ → <b>Settings</b> → <b>Site settings</b> → <b>Camera</b> → <b>${site}</b> → <b>Allow</b>.</li>`;
+  const noReset = `<li class="text-danger-emphasis">Do <b>not</b> use <b>Clear &amp; reset</b> / <b>Delete data</b> for this site — that erases all POS data on the phone.</li>`;
+  const siteSteps = samsung
+    ? `<li>Open <b>Samsung Internet</b> → ☰ → <b>Settings</b> → <b>Sites and downloads</b> → <b>Site permissions</b> → <b>Camera</b>.</li>
+       <li>Find <b>${site}</b> and turn it <b>on</b> (Allow).</li>`
+    : `<li>Open the <b>Chrome</b> browser (not this app) → ⋮ → <b>Settings</b> → <b>Site settings</b> → <b>Camera</b>.</li>
+       <li>Make sure the <b>Camera</b> switch at the top is <b>ON</b>.</li>
+       <li>If <b>${site}</b> is under <b>Blocked</b>, tap it → <b>Allow</b>. If it is not listed, that is fine — come back and tap Try again.</li>`;
+  const systemSteps = `<li>Swipe down from the top of the screen and make sure the <b>Camera access</b> tile is <b>ON</b> (Android 12 and newer).</li>
+       <li>Phone <b>Settings</b> → <b>Apps</b> → <b>${browser}</b> → <b>Permissions</b> → <b>Camera</b> → <b>Allow only while using the app</b>.</li>`;
+  let title; let steps; let extra = '';
+  if (reason === 'inapp') {
+    title = 'This page is open inside another app';
+    steps = `<li>WhatsApp, Facebook and Instagram open links in their own mini browser, which usually cannot use the camera.</li>
+      <li>Tap <b>Open in Chrome</b> below (or the ⋮ menu → <b>Open in browser</b>), then log in and install the app from Chrome.</li>`;
+    if (android) extra = `<a class="btn btn-success w-100 mb-2" href="intent://${esc(location.host + location.pathname + location.search + location.hash)}#Intent;scheme=https;package=com.android.chrome;end"><i class="bi bi-browser-chrome me-1"></i>Open in Chrome</a>`;
+  } else if (!android && !ios) {
+    title = 'Camera access is blocked';
+    steps = `<li>Click the <b>camera / lock icon</b> in the browser's address bar.</li><li>Set <b>Camera</b> to <b>Allow</b> for ${site}, then reload the page.</li>`;
   } else if (ios) {
+    title = 'Camera access is blocked';
     steps = `<li>Open the iPhone <b>Settings</b> app → <b>Safari</b> → <b>Camera</b> → choose <b>Ask</b> or <b>Allow</b>.</li>
       <li>In Safari you can also tap <b>aA</b> in the address bar → <b>Website Settings</b> → <b>Camera</b> → <b>Allow</b>.</li>
       <li>Close the app completely and open it again.</li>`;
+  } else if (reason === 'system') {
+    title = `Your phone does not let ${browser} use the camera`;
+    steps = systemSteps;
+  } else if (reason === 'dismissed') {
+    title = 'The camera request was closed';
+    steps = `<li>Tap <b>Try again</b> and choose <b>Allow</b> when the phone asks.</li>
+      <li>No question appears? ${browser} pauses requests after they are closed a few times. Then:</li>${siteSteps}
+      <li>Still nothing? Check the phone itself:</li>${systemSteps}`;
   } else {
-    steps = `<li>Click the <b>camera / lock icon</b> in the browser's address bar.</li>
-      <li>Set <b>Camera</b> to <b>Allow</b> for ${site}, then reload the page.</li>`;
+    title = 'Camera access is blocked for this app';
+    steps = `${siteSteps}${installed ? '<li>Note: <b>App info → Permissions</b> of the installed app can show <i>No permissions</i> — that is normal; the camera setting is in the browser\'s Site settings above.</li>' : `<li>Or tap the <b>lock / ⓘ icon</b> left of the address bar → <b>Permissions</b> → <b>Camera</b> → <b>Allow</b>.</li>`}
+      <li>Still blocked? Check the phone itself:</li>${systemSteps}`;
   }
-  const chromeTip = android ? '<li>Still blocked? Let Chrome use the camera: phone <b>Settings</b> → <b>Apps</b> → <b>Chrome</b> → <b>Permissions</b> → <b>Camera</b> → <b>Allow</b>.</li>' : '';
-  return `<div class="alert alert-warning small mb-2"><div class="fw-semibold mb-1"><i class="bi bi-camera-video-off me-1"></i>Camera access is blocked</div>
-    <ol class="mb-1 ps-3">${steps}${chromeTip}</ol>
-    <div>Then tap <b>Try again</b>. You can always type the barcode below or use a USB/Bluetooth barcode scanner.</div></div>`;
+  return `<div class="alert alert-warning small mb-2"><div class="fw-semibold mb-1"><i class="bi bi-camera-video-off me-1"></i>${title}</div>
+    <ol class="mb-1 ps-3">${steps}${android && reason !== 'inapp' ? noReset : ''}</ol>
+    <div>Then tap <b>Try again</b>. You can always type the barcode below or use a USB/Bluetooth barcode scanner.</div></div>${extra}`;
 }
 
 /**
@@ -93,9 +126,9 @@ export function scan({ continuous = false, onCode = null, title = 'Scan barcode'
     m.$el.find('.scanner-manual').on('submit', (e) => { e.preventDefault(); const $i = $(e.target).find('input'); handle($i.val()); last = { code: '', t: 0 }; $i.val(''); });
     m.closed.then(async () => { closed = true; try { await stopFn?.(); } catch { /* ignore */ } resolve(result); });
 
-    const showDenied = () => {
+    const showDenied = (reason) => {
       $s.text('');
-      $perm.html(cameraHelpHTML() + '<button type="button" class="btn btn-primary w-100 btn-cam-retry"><i class="bi bi-arrow-clockwise me-1"></i>Try again</button>');
+      $perm.html(cameraHelpHTML(reason) + '<button type="button" class="btn btn-primary w-100 btn-cam-retry"><i class="bi bi-arrow-clockwise me-1"></i>Try again</button>');
     };
     // Runs from the user's tap on "Allow camera" / "Try again" (or directly when already granted),
     // so the browser shows its permission prompt instead of silently blocking the request.
@@ -117,7 +150,8 @@ export function scan({ continuous = false, onCode = null, title = 'Scan barcode'
         $s.text(continuous ? 'Point the camera at barcodes. Items are added automatically.' : 'Point the camera at a barcode.');
       } catch (e) {
         if (closed) return; // dialog closed while the camera was starting
-        if (isDenied(e)) showDenied();
+        if (isDenied(e)) showDenied(await diagnoseCameraError(e));
+        else if (errName(e) === 'NotReadableError' && /Android/i.test(UA())) showDenied('system'); // camera busy or privacy switch off
         else $s.removeClass('text-body-secondary').addClass('text-danger').text(cameraError(e));
         m.$el.find('.scanner-manual input').trigger('focus');
       } finally { starting = false; }
@@ -126,8 +160,9 @@ export function scan({ continuous = false, onCode = null, title = 'Scan barcode'
 
     cameraPermission().then((state) => {
       if (closed) return;
-      if (state === 'granted') start();
-      else if (state === 'denied') showDenied();
+      if (inAppBrowser()) showDenied('inapp');
+      else if (state === 'granted') start();
+      else if (state === 'denied') showDenied('site');
       else {
         $perm.html(`<div class="text-center py-3"><i class="bi bi-camera display-6 text-primary d-block mb-2"></i>
           <div class="mb-3 small">The camera is only used to read barcodes. Tap below, then choose <b>Allow</b> when your phone asks.</div>
