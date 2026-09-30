@@ -46,9 +46,32 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
 #splash img { border-radius: 20px; }
 
 /* Login */
-.login-wrap { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 16px; max-width: 420px; margin: 0 auto; }
-.login-card { border: 0; border-radius: 16px; }
+.login-bg {
+  min-height: 100vh;
+  background: linear-gradient(150deg, #1b5e20 0%, #2e7d32 55%, #388e3c 100%);
+  display: flex; align-items: center; justify-content: center; padding: 20px 16px;
+}
+.login-wrap { width: 100%; max-width: 430px; margin: 0 auto; }
+.login-card { border-radius: 22px !important; overflow: hidden; }
+/* Farm scene header */
+.login-scene-wrap { position: relative; background: #87ceeb; }
+.login-scene { display: block; width: 100%; height: auto; }
+.login-brand-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 100%);
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px 20px 16px;
+  color: white;
+}
+.login-logo-img { border-radius: 10px; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,0.25); }
+.login-brand-name { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
+.login-brand-sub { font-size: .72rem; opacity: 0.82; margin-top: 1px; }
+/* Form area */
+.login-form-area { padding: 22px 24px 26px; background: var(--bs-body-bg); }
+.login-footer-note { color: rgba(255,255,255,0.65); }
 #toggle-pw { z-index: 5; }
+/* Sidebar brand logo */
+.brand-logo { border-radius: 6px; }
 
 /* Layout */
 #view-app { min-height: 100vh; }
