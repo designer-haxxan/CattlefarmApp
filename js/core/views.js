@@ -6,11 +6,14 @@ export const cur = () => getSettings().currency;
 export const money = (n) => `${esc(cur())} ${fmtNum(n)}`;
 
 const REF_ROUTES = {
-  sale: (id) => `#/sales/${id}`, purchase: (id) => `#/purchases/${id}`,
-  saleReturn: (id) => `#/returns/sale/${id}`, purchaseReturn: (id) => `#/returns/purchase/${id}`,
-  receipt: (id) => `#/vouchers/${id}`, payment: (id) => `#/vouchers/${id}`, transfer: (id) => `#/vouchers/${id}`,
+  milkSale: (id) => `#/milkSales/${id}`,
+  animalTxn: (id) => `#/animalTxns/${id}`,
+  farmExpense: (id) => `#/expenses/${id}`,
+  receipt: (id) => `#/vouchers/${id}`,
+  payment: (id) => `#/vouchers/${id}`,
+  transfer: (id) => `#/vouchers/${id}`,
 };
-export const REF_LABELS = { sale: 'Sale', purchase: 'Purchase', saleReturn: 'Sale return', purchaseReturn: 'Purchase return', receipt: 'Receipt', payment: 'Payment', transfer: 'Transfer', opening: 'Opening balance' };
+export const REF_LABELS = { milkSale: 'Milk Sale', animalTxn: 'Animal Txn', farmExpense: 'Expense', receipt: 'Receipt', payment: 'Payment', transfer: 'Transfer', opening: 'Opening balance' };
 
 export function refLink(refType, id, text) {
   const r = REF_ROUTES[refType];

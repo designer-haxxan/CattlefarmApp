@@ -13,7 +13,24 @@
   --bottomnav-h: 62px;
   --sidebar-w: 236px;
   --safe-b: env(safe-area-inset-bottom, 0px);
+  --farm-green: #2e7d32;
+  --bs-primary: #2e7d32;
+  --bs-primary-rgb: 46,125,50;
 }
+
+/* RTL layout overrides for Urdu */
+[dir="rtl"] #sidebar { left: auto; right: 0; border-right: 0; border-left: 1px solid var(--bs-border-color); }
+[dir="rtl"] .app-main { margin-left: 0; }
+@media (min-width: 992px) { [dir="rtl"] .app-main { margin-right: var(--sidebar-w); } }
+[dir="rtl"] .nav-menu .nav-link { border-left: 0; border-right: 3px solid transparent; }
+[dir="rtl"] .nav-menu .nav-link.active { border-right-color: var(--bs-primary); border-left: 0; }
+[dir="rtl"] .list-row .end { text-align: left; }
+[dir="rtl"] .offcanvas-start { left: auto; right: 0; transform: translateX(100%); }
+[dir="rtl"] .offcanvas-start.show { transform: none; }
+[dir="rtl"] .dropdown-menu-end { --bs-position: start; }
+[dir="rtl"] .page-header { flex-direction: row-reverse; }
+[dir="rtl"] .page-header a { flex-direction: row-reverse; }
+[dir="rtl"] .table-report td.num, [dir="rtl"] .table-report th.num { text-align: left; }
 html, body { height: 100%; }
 body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bs-tertiary-bg); }
 [data-bs-theme="dark"] body { background: #14171a; }
@@ -57,8 +74,67 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
 #bottom-nav a i { font-size: 1.3rem; }
 #bottom-nav a.active { color: var(--bs-primary); }
 #bottom-nav a.nav-sell i { background: var(--bs-primary); color: #fff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -22px; box-shadow: 0 4px 12px rgba(13,110,253,.4); font-size: 1.4rem; }
+#bottom-nav a.nav-milk i { background: #1565c0; color: #fff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -22px; box-shadow: 0 4px 12px rgba(21,101,192,.4); font-size: 1.4rem; }
 body.focus-mode #bottom-nav { display: none; }
 body.focus-mode #content { padding-bottom: 0; }
+
+/* Animal status badges */
+.badge-active   { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+.badge-sold     { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+.badge-dead     { background: #fafafa; color: #616161; border: 1px solid #bdbdbd; }
+.badge-culled   { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+.badge-pregnant { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
+.badge-female   { background: #f3e5f5; color: #4a148c; border: 1px solid #ce93d8; }
+.badge-male     { background: #e8eaf6; color: #1a237e; border: 1px solid #9fa8da; }
+
+/* Dashboard stat cards */
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+@media (min-width: 576px) { .stat-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-tile { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color-translucent); border-radius: 12px; padding: 14px; text-align: center; }
+.stat-tile .st-icon { font-size: 1.6rem; margin-bottom: 4px; }
+.stat-tile .st-val  { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.stat-tile .st-lbl  { font-size: .72rem; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Animal card grid */
+.animal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.animal-card { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color-translucent); border-radius: 12px; padding: 12px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 6px; }
+.animal-card:hover { background: var(--bs-secondary-bg); }
+.animal-card .ac-tag { font-size: .7rem; color: var(--bs-secondary-color); }
+.animal-card .ac-name { font-weight: 700; font-size: .95rem; }
+.animal-card .ac-breed { font-size: .78rem; color: var(--bs-secondary-color); }
+.animal-card .ac-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Health event type colors */
+.evt-vaccination { color: #1565c0; }
+.evt-treatment   { color: #b71c1c; }
+.evt-checkup     { color: #2e7d32; }
+.evt-deworming   { color: #6a1b9a; }
+.evt-vitamin     { color: #e65100; }
+
+/* Pregnancy tracker */
+.preg-bar { height: 6px; border-radius: 3px; background: var(--bs-secondary-bg); overflow: hidden; margin-top: 4px; }
+.preg-bar-fill { height: 100%; background: #e91e63; border-radius: 3px; transition: width .3s; }
+
+/* Milk chart bar */
+.milk-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.milk-bar-label { width: 80px; font-size: .78rem; color: var(--bs-secondary-color); text-align: right; flex-shrink: 0; }
+[dir="rtl"] .milk-bar-label { text-align: left; }
+.milk-bar-track { flex: 1; height: 14px; background: var(--bs-secondary-bg); border-radius: 7px; overflow: hidden; }
+.milk-bar-fill { height: 100%; background: #1565c0; border-radius: 7px; }
+.milk-bar-val { width: 50px; font-size: .78rem; font-weight: 600; flex-shrink: 0; }
+
+/* Tab nav for animal detail */
+.detail-tabs .nav-link { font-size: .85rem; padding: .5rem .75rem; }
+
+/* Timeline for health/breeding events */
+.timeline { list-style: none; padding: 0; margin: 0; }
+.timeline-item { display: flex; gap: 12px; padding-bottom: 16px; position: relative; }
+.timeline-item:not(:last-child)::before { content: ''; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--bs-border-color); }
+[dir="rtl"] .timeline-item:not(:last-child)::before { left: auto; right: 17px; }
+.timeline-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+.timeline-body { flex: 1; min-width: 0; }
+.timeline-body .tl-title { font-weight: 600; }
+.timeline-body .tl-meta { font-size: .78rem; color: var(--bs-secondary-color); }
 
 /* Connection badge */
 #conn-badge { font-weight: 500; font-size: .72rem; padding: .4em .7em; }
@@ -174,3 +250,26 @@ button.list-row { width: 100%; background: none; border-left: 0; border-right: 0
 .print-report th, .print-report td { border: 1px solid #999; padding: 3px 5px; }
 .print-report td.num, .print-report th.num { text-align: right; }
 .receipt-preview { background: #fff; padding: 12px 6px; border-radius: 8px; border: 1px solid var(--bs-border-color); overflow-x: auto; }
+
+/* Settings page rows */
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--bs-border-color-translucent); }
+.settings-row:last-child { border-bottom: 0; }
+.settings-label { font-size: .875rem; flex: 0 0 140px; color: var(--bs-body-color); }
+.settings-value { flex: 1; min-width: 0; }
+
+/* Section header in list cards */
+.list-section-header { padding: 6px 12px; font-size: .73rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); background: var(--bs-secondary-bg); border-bottom: 1px solid var(--bs-border-color-translucent); }
+
+/* Pregnancy progress bar */
+.pregnancy-bar .progress-bar { transition: width .4s ease; }
+
+/* Detail page tabs */
+.detail-tabs { border-bottom: 1px solid var(--bs-border-color-translucent); }
+.detail-tabs .nav-link { border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--bs-secondary-color); font-size: .85rem; }
+.detail-tabs .nav-link.active { border-bottom-color: var(--bs-primary); color: var(--bs-primary); font-weight: 600; background: none; }
+
+/* Report tabs */
+.rpt-tab { font-size: .78rem; padding: 5px 10px; }
+
+/* Text pink for female icon */
+.text-pink { color: #e91e63; }
